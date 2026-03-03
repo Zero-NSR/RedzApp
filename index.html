@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redz Control Panel</title>
+    <style>
+        :root { --redz: #ff3b30; --bg: #0a0a0a; --card: #161616; }
+        body { background: var(--bg); color: white; font-family: -apple-system, sans-serif; text-align: center; padding: 20px; }
+        .card { background: var(--card); border-radius: 20px; padding: 20px; margin-bottom: 15px; border: 1px solid #222; }
+        input { width: 90%; padding: 12px; margin: 10px 0; border-radius: 10px; border: 1px solid #333; background: #000; color: #fff; text-align: center; }
+        .btn { background: var(--redz); color: white; padding: 15px; border-radius: 12px; border: none; width: 100%; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn-blue { background: #007aff; }
+        .result { margin-top: 15px; font-size: 0.8rem; word-break: break-all; color: #00ff00; }
+    </style>
+</head>
+<body>
+
+    <h1 style="color: var(--redz);">Redz <span style="color:#fff">Panel</span></h1>
+
+    <div class="card">
+        <h3>1. تثبيت شهادة الإعدادات</h3>
+        <button class="btn btn-blue" onclick="genConfig()">تحويل إلى ملف تعريف</button>
+    </div>
+
+    <div class="card">
+        <h3>2. مولد الـ Plist التلقائي</h3>
+        <input type="text" id="ipa" placeholder="رابط الـ IPA المباشر">
+        <input type="text" id="name" placeholder="اسم التطبيق">
+        <input type="text" id="bundle" placeholder="البنل (مثلاً: com.redz.app)">
+        <button class="btn" onclick="genPlist()">توليد رابط التثبيت</button>
+        <div id="out" class="result"></div>
+    </div>
+
+    <script>
+        function genConfig() {
+            const uuid = "REDZ-" + Math.random().toString(36).substring(7).toUpperCase();
+            const xml = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>PayloadContent</key><array/><key>PayloadDisplayName</key><string>Redz Forevermark</string><key>PayloadIdentifier</key><string>com.redz.${uuid}</string><key>PayloadType</key><string>Configuration</string><key>PayloadUUID</key><string>${uuid}</string><key>PayloadVersion</key><integer>1</integer></dict></plist>`;
+            const blob = new Blob([xml], { type: 'application/x-apple-aspen-config' });
+            const url = window.URL.createObjectURL(blob);
+            window.location.href = url;
+        }
+
+        function genPlist() {
+            const ipa = document.getElementById('ipa').value;
+            const name = document.getElementById('name').value;
+            const bid = document.getElementById('bundle').value || "com.redz.temp";
+            if(!ipa || !name) return alert("عب البيانات");
+
+            const plist = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>items</key><array><dict><key>assets</key><array><dict><key>kind</key><string>software-package</string><key>url</key><string>${ipa}</string></dict></array><key>metadata</key><dict><key>bundle-identifier</key><string>${bid}</string><key>bundle-version</key><string>1.0</string><key>kind</key><string>software</string><key>title</key><string>${name}</string></dict></dict></array></dict></plist>`;
+            const base64 = btoa(unescape(encodeURIComponent(plist)));
+            const link = `itms-services://?action=download-manifest&url=data:text/xml;base64,${base64}`;
+            
+            document.getElementById('out').innerHTML = `<a href="${link}" style="color:var(--redz)">اضغط هنا لبدء التثبيت المباشر</a>`;
+        }
+    </script>
+</body>
+</html>
