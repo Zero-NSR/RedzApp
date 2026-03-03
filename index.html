@@ -3,98 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Redz Signer & Profile Pro</title>
+    <title>Redz Certificate Manager</title>
     <style>
-        :root { --redz: #ff3b30; --bg: #000; --card: #111; --border: #222; }
-        body { background: var(--bg); color: white; font-family: -apple-system, sans-serif; padding: 20px; text-align: center; margin: 0; }
-        .container { max-width: 450px; margin: auto; }
-        h1 { color: var(--redz); font-size: 2rem; margin-bottom: 5px; }
-        p.subtitle { color: #666; font-size: 0.9rem; margin-bottom: 30px; }
-        .card { background: var(--card); border: 1px solid var(--border); border-radius: 25px; padding: 20px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(255,59,48,0.05); }
-        h3 { margin-top: 0; font-size: 1.1rem; color: #fff; border-right: 4px solid var(--redz); padding-right: 10px; text-align: right; }
-        input { width: 100%; box-sizing: border-box; padding: 15px; margin: 10px 0; border-radius: 12px; border: 1px solid #333; background: #050505; color: #fff; text-align: center; font-size: 14px; }
-        input:focus { border-color: var(--redz); outline: none; box-shadow: 0 0 5px rgba(255,59,48,0.5); }
-        .btn { background: var(--redz); color: white; padding: 16px; border-radius: 15px; border: none; width: 100%; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.2s; margin-top: 5px; }
-        .btn-blue { background: #007aff; }
-        .btn:active { transform: scale(0.97); }
-        .status { font-size: 0.8rem; color: #888; margin-top: 10px; min-height: 20px; }
-        .file-upload { position: relative; overflow: hidden; display: inline-block; width: 100%; }
-        .file-upload input[type=file] { position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; height: 100%; width: 100%; }
-        .upload-label { display: block; background: #1a1a1a; border: 2px dashed #333; padding: 20px; border-radius: 15px; color: #888; cursor: pointer; }
+        :root { --redz: #ff3b30; --bg: #000; }
+        body { background: var(--bg); color: white; font-family: -apple-system, sans-serif; text-align: center; padding: 20px; }
+        .card { background: #111; border: 1px solid #222; border-radius: 25px; padding: 20px; max-width: 400px; margin: auto; }
+        input { width: 100%; box-sizing: border-box; padding: 15px; margin: 10px 0; border-radius: 12px; border: 1px solid #333; background: #000; color: #fff; text-align: center; }
+        .btn { background: var(--redz); color: white; padding: 16px; border-radius: 15px; border: none; width: 100%; font-weight: bold; cursor: pointer; font-size: 16px; }
+        .status { font-size: 0.8rem; color: #888; margin-top: 10px; }
+        .info-box { background: #1a1a1a; padding: 10px; border-radius: 10px; margin-top: 15px; display: none; text-align: right; font-size: 13px; }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>Redz <span style="color:white">Tools</span></h1>
-        <p class="subtitle">نسخة المطورين لمتجر Redz</p>
+    <div class="card">
+        <h2 style="color: var(--redz);">تعديل ورفع الشهادة</h2>
+        <p class="status">ارفع ملف .mobileprovision لتجهيز الإعدادات</p>
 
-        <div class="card">
-            <h3>📂 شهادة الإعدادات (Profile)</h3>
-            <div class="file-upload">
-                <label class="upload-label" id="fileLabel">اضغط لرفع ملف .mobileprovision</label>
-                <input type="file" id="certFile" accept=".mobileprovision" onchange="handleCertUpload()">
-            </div>
-            <input type="text" id="bundleId" placeholder="المعرف (Bundle ID) سيظهر هنا">
-            <button class="btn btn-blue" onclick="downloadProfile()">تنزيل مباشر للإعدادات</button>
-            <div id="certStatus" class="status"></div>
-        </div>
-
-        <div class="card">
-            <h3>🚀 تثبيت التطبيقات (IPA)</h3>
-            <input type="text" id="ipaUrl" placeholder="رابط الـ IPA المباشر">
-            <input type="text" id="appName" placeholder="اسم التطبيق">
-            <button class="btn" onclick="installApp()">تثبيت فوري</button>
-            <div id="installStatus" class="status"></div>
-        </div>
+        <input type="file" id="certInput" accept=".mobileprovision" onchange="analyzeCert()">
         
-        <p style="color:#333; font-size: 10px;">SR0N STORE &copy; 2026</p>
+        <input type="text" id="certName" placeholder="اسم الشهادة (مثلاً: Forevermark)">
+        <input type="text" id="bundleId" placeholder="المعرف (Bundle ID)">
+        <input type="text" id="teamName" placeholder="اسم الفريق (Team Name)">
+
+        <button class="btn" onclick="buildAndInstall()">تحويل وتثبيت كشهادة إعدادات</button>
+        
+        <div id="infoBox" class="info-box">
+            <p>✅ تم تحليل بيانات الشهادة بنجاح.</p>
+            <p id="expiryDate" style="color: #00ff00;"></p>
+        </div>
     </div>
 
     <script>
-        // دالة قراءة الشهادة واستخراج البنل ايدي
-        function handleCertUpload() {
-            const file = document.getElementById('certFile').files[0];
-            const label = document.getElementById('fileLabel');
-            const bidInput = document.getElementById('bundleId');
-            const status = document.getElementById('certStatus');
-
+        function analyzeCert() {
+            const file = document.getElementById('certInput').files[0];
             if (!file) return;
-            label.innerText = file.name;
-            status.innerText = "جاري استخراج البيانات...";
 
             const reader = new FileReader();
             reader.onload = function(e) {
                 const content = new TextDecoder().decode(e.target.result);
-                // استخراج الـ Bundle Identifier
-                const match = content.match(/<key>application-identifier<\/key>\s*<string>(.*?)<\/string>/);
                 
-                if (match && match[1]) {
-                    let fullId = match[1];
-                    let cleanId = fullId.includes('.') ? fullId.split('.').slice(1).join('.') : fullId;
-                    bidInput.value = cleanId;
-                    status.innerText = "✅ تم استخراج Bundle ID";
-                    status.style.color = "#00ff00";
-                } else {
-                    status.innerText = "⚠️ لم نجد المعرف، اكتبه يدوياً";
-                    status.style.color = "#ffcc00";
+                // استخراج الـ Bundle ID
+                const bidMatch = content.match(/<key>application-identifier<\/key>\s*<string>(.*?)<\/string>/);
+                // استخراج اسم الشهادة
+                const nameMatch = content.match(/<key>Name<\/key>\s*<string>(.*?)<\/string>/);
+                // استخراج اسم الفريق
+                const teamMatch = content.match(/<key>TeamName<\/key>\s*<string>(.*?)<\/string>/);
+
+                if (bidMatch) {
+                    let fullId = bidMatch[1];
+                    document.getElementById('bundleId').value = fullId.includes('.') ? fullId.split('.').slice(1).join('.') : fullId;
                 }
+                if (nameMatch) document.getElementById('certName').value = nameMatch[1];
+                if (teamMatch) document.getElementById('teamName').value = teamMatch[1];
+
+                document.getElementById('infoBox').style.display = 'block';
             };
             reader.readAsArrayBuffer(file);
         }
 
-        // دالة التنزيل المباشر لملف التكوين
-        function downloadProfile() {
+        function buildAndInstall() {
+            const name = document.getElementById('certName').value || "Redz Cert";
             const bid = document.getElementById('bundleId').value || "com.redz.config";
+            const team = document.getElementById('teamName').value || "Redz Team";
             const uuid = "REDZ-" + Math.random().toString(36).substring(7).toUpperCase();
-            
+
+            // إنشاء ملف التعريف (MobileConfig) بدقة عالية
             const config = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>PayloadContent</key><array/>
-    <key>PayloadDisplayName</key><string>Redz Cert (${bid})</string>
-    <key>PayloadIdentifier</key><string>com.redz.profile.${uuid}</string>
+    <key>PayloadContent</key>
+    <array>
+        <dict>
+            <key>PayloadDescription</key><string>تجهيز شهادة التوقيع لمتجر Redz</string>
+            <key>PayloadDisplayName</key><string>${name}</string>
+            <key>PayloadIdentifier</key><string>com.apple.mgmt.${uuid}</string>
+            <key>PayloadOrganization</key><string>${team}</string>
+            <key>PayloadType</key><string>Configuration</string>
+            <key>PayloadUUID</key><string>${uuid}</string>
+            <key>PayloadVersion</key><integer>1</integer>
+        </dict>
+    </array>
+    <key>PayloadDisplayName</key><string>شهادة Redz: ${name}</string>
+    <key>PayloadIdentifier</key><string>${bid}</string>
+    <key>PayloadOrganization</key><string>${team}</string>
     <key>PayloadRemovalDisallowed</key><false/>
     <key>PayloadType</key><string>Configuration</string>
     <key>PayloadUUID</key><string>${uuid}</string>
@@ -102,35 +95,8 @@
 </dict>
 </plist>`;
 
-            const base64Config = btoa(unescape(encodeURIComponent(config)));
-            const dataUrl = 'data:application/x-apple-aspen-config;base64,' + base64Config;
-
-            // التنزيل المباشر
-            window.location.href = dataUrl;
-            
-            setTimeout(() => {
-                alert("تم التنزيل! اذهب إلى:\nالإعدادات > تم تنزيل ملف التعريف > تثبيت");
-            }, 1000);
-        }
-
-        // دالة تثبيت التطبيقات عبر Plist فوري
-        function installApp() {
-            const ipa = document.getElementById('ipaUrl').value;
-            const name = document.getElementById('appName').value;
-            const bid = document.getElementById('bundleId').value;
-
-            if(!ipa || !name || !bid) {
-                alert("يرجى التأكد من كتابة: الرابط، الاسم، و الـ Bundle ID");
-                return;
-            }
-
-            const plist = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>items</key><array><dict><key>assets</key><array><dict><key>kind</key><string>software-package</string><key>url</key><string>${ipa}</string></dict></array><key>metadata</key><dict><key>bundle-identifier</key><string>${bid}</string><key>bundle-version</key><string>1.0</string><key>kind</key><string>software</string><key>title</key><string>${name}</string></dict></dict></array></dict></plist>`;
-            
-            const base64Plist = btoa(unescape(encodeURIComponent(plist)));
-            const installUrl = `itms-services://?action=download-manifest&url=data:text/xml;base64,${base64Plist}`;
-            
-            window.location.href = installUrl;
-            document.getElementById('installStatus').innerText = "جاري طلب التثبيت... اضغط 'تثبيت' في النافذة الظاهرة";
+            const base64 = btoa(unescape(encodeURIComponent(config)));
+            window.location.href = 'data:application/x-apple-aspen-config;base64,' + base64;
         }
     </script>
 </body>
