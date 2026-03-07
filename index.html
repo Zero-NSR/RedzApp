@@ -1,67 +1,84 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tong Tong Code Editor</title>
+    <title>Tong Tong Python IDE</title>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.23.4/ace.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #0f172a; color: white; height: 100vh; display: flex; flex-direction: column; }
-        #editor { flex-grow: 1; font-size: 16px; border-radius: 12px; margin: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
-        .neon-border { border: 1px solid #8b5cf6; box-shadow: 0 0 10px #8b5cf6; }
+        #editor { height: 300px; border-radius: 12px; font-size: 16px; margin: 10px; }
+        #output { background: #000; color: #10b981; padding: 15px; margin: 10px; border-radius: 12px; font-family: monospace; white-space: pre-wrap; flex-grow: 1; overflow-y: auto; border: 1px solid #1e293b; }
+        .loading { color: #f59e0b; font-weight: bold; }
     </style>
 </head>
-<body class="p-2 sm:p-5">
+<body class="p-4">
 
-    <div class="flex justify-between items-center mb-4 px-4">
-        <h1 class="text-2xl font-black italic text-purple-500">TONG TONG <span class="text-white not-italic">IDE</span></h1>
-        <div class="space-x-2 flex rtl:space-x-reverse">
-            <button onclick="copyCode()" class="bg-zinc-800 hover:bg-zinc-700 px-4 py-2 rounded-xl text-xs font-bold transition">نسخ الكود 📋</button>
-            <button onclick="downloadCode()" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-xl text-xs font-bold transition">تحميل الملف 💾</button>
-        </div>
+    <div class="flex justify-between items-center mb-4">
+        <h1 class="text-xl font-bold text-purple-500">TONG TONG <span class="text-white">PYTHON</span></h1>
+        <button onclick="runPython()" id="run-btn" class="bg-green-600 hover:bg-green-500 px-6 py-2 rounded-xl font-bold transition flex items-center shadow-lg shadow-green-900/20">
+            تشغيل الكود 🚀
+        </button>
     </div>
 
-    <div class="px-4 mb-2">
-        <select id="language" onchange="changeLanguage()" class="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1 text-xs outline-none">
-            <option value="ace/mode/lua">Lua (Roblox)</option>
-            <option value="ace/mode/python">Python</option>
-            <option value="ace/mode/javascript">JavaScript</option>
-        </select>
+    <div id="editor"># اكتب كود بايثون هنا
+print("أهلاً بك في محرر Tong Tong!")
+name = "الوحش"
+print(f"بالتوفيق يا {name}")
+
+for i in range(3):
+    print(f"الرقم: {i}")
     </div>
 
-    <div id="editor">-- اكتب كودك هنا...
-print("Hello from Tong Tong IDE")</div>
+    <div class="mt-4 px-2 font-bold text-sm text-gray-400">المخرجات (Output):</div>
+    <div id="output" class="text-sm">جاري تحميل محرك بايثون... انتظر قليلاً ⏳</div>
 
     <script>
-        // إعداد المحرر
+        // إعداد المحرر (Ace Editor)
         var editor = ace.edit("editor");
-        editor.setTheme("ace/theme/one_dark"); // شكل احترافي داكن
-        editor.session.setMode("ace/mode/lua");
-        editor.setShowPrintMargin(false);
+        editor.setTheme("ace/theme/one_dark");
+        editor.session.setMode("ace/mode/python");
 
-        // تغيير اللغة
-        function changeLanguage() {
-            var lang = document.getElementById("language").value;
-            editor.session.setMode(lang);
+        let pyodide;
+        // تحميل محرك بايثون (Pyodide)
+        async function setup() {
+            pyodide = await loadPyodide();
+            document.getElementById("output").innerText = "المحرك جاهز! اكتب كودك واضغط تشغيل.";
         }
+        setup();
 
-        // دالة النسخ
-        function copyCode() {
-            const code = editor.getValue();
-            navigator.clipboard.writeText(code);
-            alert("تم نسخ الكود بنجاح!");
-        }
+        // دالة التشغيل
+        async function runPython() {
+            const outputDiv = document.getElementById("output");
+            const btn = document.getElementById("run-btn");
+            
+            outputDiv.innerText = "جاري التنفيذ... ⚙️";
+            btn.disabled = true;
+            btn.style.opacity = "0.5";
 
-        // دالة التحميل
-        function downloadCode() {
-            const code = editor.getValue();
-            const blob = new Blob([code], { type: "text/plain" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = "script.lua";
-            a.click();
+            try {
+                const code = editor.getValue();
+                // إعادة توجيه الـ print لـ outputDiv
+                pyodide.runPython(`
+                    import sys
+                    import io
+                    sys.stdout = io.StringIO()
+                `);
+                
+                await pyodide.runPythonAsync(code);
+                
+                const stdout = pyodide.runPython("sys.stdout.getvalue()");
+                outputDiv.innerText = stdout || "تم التنفيذ بنجاح (لا توجد مخرجات).";
+            } catch (err) {
+                outputDiv.innerText = "خطأ في الكود: \n" + err;
+                outputDiv.style.color = "#ef4444";
+            } finally {
+                btn.disabled = false;
+                btn.style.opacity = "1";
+                outputDiv.style.color = "#10b981";
+            }
         }
     </script>
 </body>
