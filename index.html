@@ -1,102 +1,67 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Redz Certificate Manager</title>
+    <title>Tong Tong Code Editor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.23.4/ace.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root { --redz: #ff3b30; --bg: #000; }
-        body { background: var(--bg); color: white; font-family: -apple-system, sans-serif; text-align: center; padding: 20px; }
-        .card { background: #111; border: 1px solid #222; border-radius: 25px; padding: 20px; max-width: 400px; margin: auto; }
-        input { width: 100%; box-sizing: border-box; padding: 15px; margin: 10px 0; border-radius: 12px; border: 1px solid #333; background: #000; color: #fff; text-align: center; }
-        .btn { background: var(--redz); color: white; padding: 16px; border-radius: 15px; border: none; width: 100%; font-weight: bold; cursor: pointer; font-size: 16px; }
-        .status { font-size: 0.8rem; color: #888; margin-top: 10px; }
-        .info-box { background: #1a1a1a; padding: 10px; border-radius: 10px; margin-top: 15px; display: none; text-align: right; font-size: 13px; }
+        body { background-color: #0f172a; color: white; height: 100vh; display: flex; flex-direction: column; }
+        #editor { flex-grow: 1; font-size: 16px; border-radius: 12px; margin: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        .neon-border { border: 1px solid #8b5cf6; box-shadow: 0 0 10px #8b5cf6; }
     </style>
 </head>
-<body>
+<body class="p-2 sm:p-5">
 
-    <div class="card">
-        <h2 style="color: var(--redz);">تعديل ورفع الشهادة</h2>
-        <p class="status">ارفع ملف .mobileprovision لتجهيز الإعدادات</p>
-
-        <input type="file" id="certInput" accept=".mobileprovision" onchange="analyzeCert()">
-        
-        <input type="text" id="certName" placeholder="اسم الشهادة (مثلاً: Forevermark)">
-        <input type="text" id="bundleId" placeholder="المعرف (Bundle ID)">
-        <input type="text" id="teamName" placeholder="اسم الفريق (Team Name)">
-
-        <button class="btn" onclick="buildAndInstall()">تحويل وتثبيت كشهادة إعدادات</button>
-        
-        <div id="infoBox" class="info-box">
-            <p>✅ تم تحليل بيانات الشهادة بنجاح.</p>
-            <p id="expiryDate" style="color: #00ff00;"></p>
+    <div class="flex justify-between items-center mb-4 px-4">
+        <h1 class="text-2xl font-black italic text-purple-500">TONG TONG <span class="text-white not-italic">IDE</span></h1>
+        <div class="space-x-2 flex rtl:space-x-reverse">
+            <button onclick="copyCode()" class="bg-zinc-800 hover:bg-zinc-700 px-4 py-2 rounded-xl text-xs font-bold transition">نسخ الكود 📋</button>
+            <button onclick="downloadCode()" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-xl text-xs font-bold transition">تحميل الملف 💾</button>
         </div>
     </div>
 
+    <div class="px-4 mb-2">
+        <select id="language" onchange="changeLanguage()" class="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1 text-xs outline-none">
+            <option value="ace/mode/lua">Lua (Roblox)</option>
+            <option value="ace/mode/python">Python</option>
+            <option value="ace/mode/javascript">JavaScript</option>
+        </select>
+    </div>
+
+    <div id="editor">-- اكتب كودك هنا...
+print("Hello from Tong Tong IDE")</div>
+
     <script>
-        function analyzeCert() {
-            const file = document.getElementById('certInput').files[0];
-            if (!file) return;
+        // إعداد المحرر
+        var editor = ace.edit("editor");
+        editor.setTheme("ace/theme/one_dark"); // شكل احترافي داكن
+        editor.session.setMode("ace/mode/lua");
+        editor.setShowPrintMargin(false);
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const content = new TextDecoder().decode(e.target.result);
-                
-                // استخراج الـ Bundle ID
-                const bidMatch = content.match(/<key>application-identifier<\/key>\s*<string>(.*?)<\/string>/);
-                // استخراج اسم الشهادة
-                const nameMatch = content.match(/<key>Name<\/key>\s*<string>(.*?)<\/string>/);
-                // استخراج اسم الفريق
-                const teamMatch = content.match(/<key>TeamName<\/key>\s*<string>(.*?)<\/string>/);
-
-                if (bidMatch) {
-                    let fullId = bidMatch[1];
-                    document.getElementById('bundleId').value = fullId.includes('.') ? fullId.split('.').slice(1).join('.') : fullId;
-                }
-                if (nameMatch) document.getElementById('certName').value = nameMatch[1];
-                if (teamMatch) document.getElementById('teamName').value = teamMatch[1];
-
-                document.getElementById('infoBox').style.display = 'block';
-            };
-            reader.readAsArrayBuffer(file);
+        // تغيير اللغة
+        function changeLanguage() {
+            var lang = document.getElementById("language").value;
+            editor.session.setMode(lang);
         }
 
-        function buildAndInstall() {
-            const name = document.getElementById('certName').value || "Redz Cert";
-            const bid = document.getElementById('bundleId').value || "com.redz.config";
-            const team = document.getElementById('teamName').value || "Redz Team";
-            const uuid = "REDZ-" + Math.random().toString(36).substring(7).toUpperCase();
+        // دالة النسخ
+        function copyCode() {
+            const code = editor.getValue();
+            navigator.clipboard.writeText(code);
+            alert("تم نسخ الكود بنجاح!");
+        }
 
-            // إنشاء ملف التعريف (MobileConfig) بدقة عالية
-            const config = `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>PayloadContent</key>
-    <array>
-        <dict>
-            <key>PayloadDescription</key><string>تجهيز شهادة التوقيع لمتجر Redz</string>
-            <key>PayloadDisplayName</key><string>${name}</string>
-            <key>PayloadIdentifier</key><string>com.apple.mgmt.${uuid}</string>
-            <key>PayloadOrganization</key><string>${team}</string>
-            <key>PayloadType</key><string>Configuration</string>
-            <key>PayloadUUID</key><string>${uuid}</string>
-            <key>PayloadVersion</key><integer>1</integer>
-        </dict>
-    </array>
-    <key>PayloadDisplayName</key><string>شهادة Redz: ${name}</string>
-    <key>PayloadIdentifier</key><string>${bid}</string>
-    <key>PayloadOrganization</key><string>${team}</string>
-    <key>PayloadRemovalDisallowed</key><false/>
-    <key>PayloadType</key><string>Configuration</string>
-    <key>PayloadUUID</key><string>${uuid}</string>
-    <key>PayloadVersion</key><integer>1</integer>
-</dict>
-</plist>`;
-
-            const base64 = btoa(unescape(encodeURIComponent(config)));
-            window.location.href = 'data:application/x-apple-aspen-config;base64,' + base64;
+        // دالة التحميل
+        function downloadCode() {
+            const code = editor.getValue();
+            const blob = new Blob([code], { type: "text/plain" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "script.lua";
+            a.click();
         }
     </script>
 </body>
